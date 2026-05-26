@@ -23,6 +23,10 @@ export default (sequelize, DataTypes) => {
       type: DataTypes.STRING(150),
       allowNull: false
     },
+    telefone: {
+    type: DataTypes.STRING(20),
+    allowNull: false
+    },
     // FK para Endereco_Almoxarifado. A associação (belongsTo) fica em index.js.
     id_endereco: {
       type: DataTypes.INTEGER.UNSIGNED,
