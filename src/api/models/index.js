@@ -9,8 +9,8 @@ import telefoneFornecedorModel from "./telefone-fornecedor.model.js"
 import enderecoFornecedorModel from "./endereco-fornecedor.model.js"
 //import produtoModel from "./produto.model.js"
 //import produtoFornecedorModel from "./produto-fornecedor.model.js"
-//import enderecoAlmoxarifadoModel from "./endereco-almoxarifado.model.js"
-//import almoxarifadoModel from "./almoxarifado.model.js"
+import enderecoAlmoxarifadoModel from "./endereco-almoxarifado.model.js"
+import almoxarifadoModel from "./almoxarifado.model.js"
 //import gestaoAlmoxarifadoModel from "./gestao-almoxarifado.model.js"
 //import estoqueModel from "./estoque.model.js"
 //import saidaModel from "./saida.model.js"
@@ -36,8 +36,8 @@ const db = {
   EnderecoFornecedor: enderecoFornecedorModel(sequelize, DataTypes),
   //Produto: produtoModel(sequelize, DataTypes),
   //ProdutoFornecedor: produtoFornecedorModel(sequelize, DataTypes),
-  //EnderecoAlmoxarifado: enderecoAlmoxarifadoModel(sequelize, DataTypes),
-  //Almoxarifado: almoxarifadoModel(sequelize, DataTypes),
+  EnderecoAlmoxarifado: enderecoAlmoxarifadoModel(sequelize, DataTypes),
+  Almoxarifado: almoxarifadoModel(sequelize, DataTypes),
   //GestaoAlmoxarifado: gestaoAlmoxarifadoModel(sequelize, DataTypes),
   //Estoque: estoqueModel(sequelize, DataTypes),
   //Saida: saidaModel(sequelize, DataTypes),
@@ -79,8 +79,8 @@ db.EnderecoFornecedor.belongsTo(db.Fornecedor, { foreignKey: "id_fornecedor", as
 //})
 
 // Endereço Almoxarifado ↔ Almoxarifado
-//db.EnderecoAlmoxarifado.hasMany(db.Almoxarifado, { foreignKey: "id_endereco", as: "almoxarifados" })
-//db.Almoxarifado.belongsTo(db.EnderecoAlmoxarifado, { foreignKey: "id_endereco", as: "endereco" })
+db.EnderecoAlmoxarifado.hasMany(db.Almoxarifado, { foreignKey: "id_endereco", as: "almoxarifados" })
+db.Almoxarifado.belongsTo(db.EnderecoAlmoxarifado, { foreignKey: "id_endereco", as: "endereco" })
 
 // Gestão Almoxarifado (Funcionário ↔ Almoxarifado N:M)
 //db.Funcionario.belongsToMany(db.Almoxarifado, {
