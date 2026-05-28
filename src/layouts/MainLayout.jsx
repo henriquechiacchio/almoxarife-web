@@ -24,6 +24,7 @@ import HomeIcon from "@mui/icons-material/Home";
 import PeopleIcon from "@mui/icons-material/People";
 import StorefrontIcon from "@mui/icons-material/Storefront";
 import Inventory2Icon from "@mui/icons-material/Inventory2";
+import WarehouseIcon from "@mui/icons-material/Warehouse";
 import DownloadIcon from "@mui/icons-material/Download";
 import UploadIcon from "@mui/icons-material/Upload";
 import SwapHorizIcon from "@mui/icons-material/SwapHoriz";
@@ -49,6 +50,7 @@ const menuItems = [
   { label: "Início",        icon: <HomeIcon />,        path: "/",              enabled: true  },
   { label: "Funcionários",  icon: <PeopleIcon />,      path: "/funcionarios",  enabled: true  },
   { label: "Fornecedores",  icon: <StorefrontIcon />,  path: "/fornecedores",  enabled: true  },
+  { label: "Almoxarifados", icon: <WarehouseIcon />,   path: "/almoxarifados", enabled: true  },
   { label: "Produtos / Itens", icon: <Inventory2Icon />, path: "/produtos",    enabled: false },
   { label: "Entradas",      icon: <DownloadIcon />,    path: "/entradas",      enabled: false },
   { label: "Saídas",        icon: <UploadIcon />,      path: "/saidas",        enabled: false },

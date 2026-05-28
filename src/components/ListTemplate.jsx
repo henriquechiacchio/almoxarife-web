@@ -20,18 +20,27 @@ import BlockIcon from "@mui/icons-material/Block";
 /**
  * Template de listagem padrão do sistema.
  *
- * IMPORTANTE: a API (os props) foi mantida igual à versão original:
- *   - title, columns, data, onCreate, onEdit, onInactivate, filters
+ * IMPORTANTE: a API (os props) foi mantida compatível com a versão anterior:
+ *   - title, columns, data, onCreate, onEdit, onInactivate, filters, onSearch
+ *
+ * NOVO: prop opcional `onRowClick`
+ * ----------------------------------------------------------------
+ * Adicionada para o módulo de Almoxarifados, onde clicar na linha
+ * abre a tela de detalhes (com estoque, fornecedores, etc.).
+ *
+ * Como é OPCIONAL: páginas que NÃO passam `onRowClick` (Fornecedores,
+ * Funcionários) continuam funcionando exatamente como antes. O cursor
+ * só vira "pointer" e o hover só fica destacado QUANDO a prop existe.
+ *
+ * Detalhe técnico importante: `e.stopPropagation()` nos botões de
+ * Editar/Inativar — sem isso, clicar no botão também dispara o
+ * onRowClick (event bubbling do DOM), abrindo os detalhes E executando
+ * a ação ao mesmo tempo. Bug clássico.
  *
  * Sobre os filtros:
  *   Cada página passa via prop `filters` os TextFields específicos do
- *   contexto (ex.: Funcionários -> Nome + CPF; Fornecedores -> Razão
- *   Social + CNPJ). Aqui dentro só colocamos esses campos em linha e
- *   adicionamos o botão "Buscar" à direita.
- *
- *   Esse padrão é interessante porque cada módulo controla os próprios
- *   filtros (nome, CPF, CNPJ, categoria, etc.) sem que o ListTemplate
- *   precise "saber" quais são. Isso é o princípio de "inversão de
+ *   contexto. Aqui dentro só colocamos esses campos em linha e
+ *   adicionamos o botão "Buscar" à direita. Padrão de "inversão de
  *   controle" — o componente pai diz o que mostrar, o filho só organiza.
  */
 export default function ListTemplate({
@@ -42,7 +51,8 @@ export default function ListTemplate({
   onCreate,
   onEdit,
   onInactivate,
-  onSearch // opcional — se a página quiser reagir ao clique em Buscar
+  onSearch,
+  onRowClick // NOVO: opcional, ativa clique na linha
 }) {
   return (
     <Paper sx={{ p: 3, borderRadius: 3 }}>
@@ -116,7 +126,13 @@ export default function ListTemplate({
           <TableBody>
             {data?.length ? (
               data.map((item, i) => (
-                <TableRow key={i} hover>
+                <TableRow
+                  key={i}
+                  hover
+                  onClick={onRowClick ? () => onRowClick(item) : undefined}
+                  // Só ativa cursor pointer se a linha for clicável
+                  sx={onRowClick ? { cursor: "pointer" } : undefined}
+                >
                   {columns.map((col, j) => (
                     <TableCell key={j}>{item[col]}</TableCell>
                   ))}
@@ -125,7 +141,14 @@ export default function ListTemplate({
                       <Tooltip title="Editar">
                         <IconButton
                           size="small"
-                          onClick={() => onEdit && onEdit(item)}
+                          onClick={(e) => {
+                            // CRÍTICO: impede que o clique no botão "vaze"
+                            // para o onClick da TableRow (event bubbling).
+                            // Sem isso, clicar em "Editar" abriria os
+                            // detalhes E iria para edição ao mesmo tempo.
+                            e.stopPropagation();
+                            onEdit && onEdit(item);
+                          }}
                           sx={{ color: "primary.main" }}
                         >
                           <EditIcon fontSize="small" />
@@ -134,7 +157,10 @@ export default function ListTemplate({
                       <Tooltip title="Inativar">
                         <IconButton
                           size="small"
-                          onClick={() => onInactivate && onInactivate(item)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onInactivate && onInactivate(item);
+                          }}
                           sx={{ color: "warning.main" }}
                         >
                           <BlockIcon fontSize="small" />

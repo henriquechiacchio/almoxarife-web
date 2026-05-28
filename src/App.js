@@ -17,6 +17,12 @@ import FornecedoresList from "./pages/fornecedores/List";
 import FornecedorForm from "./pages/fornecedores/Form";
 import FornecedorEdit from "./pages/fornecedores/Edit";
 
+// Almoxarifados (módulo novo — front-end completo, backend pendente)
+import AlmoxarifadosList from "./pages/almoxarifados/List";
+import AlmoxarifadoDetalhes from "./pages/almoxarifados/Detalhes";
+import AlmoxarifadoForm from "./pages/almoxarifados/Form";
+import AlmoxarifadoEdit from "./pages/almoxarifados/Edit";
+
 function App() {
   return (
     <ThemeProvider theme={theme}>
@@ -35,6 +41,23 @@ function App() {
             <Route path="/fornecedores" element={<FornecedoresList />} />
             <Route path="/fornecedores/cadastro" element={<FornecedorForm />} />
             <Route path="/fornecedores/:id/editar" element={<FornecedorEdit />} />
+
+            {/*
+              Módulo Almoxarifados — fluxo:
+              /almoxarifados            → listagem (com editar e inativar)
+              /almoxarifados/cadastro   → cadastro (RF013)
+              /almoxarifados/:id        → detalhes do almoxarifado (estoque, fornecedores)
+              /almoxarifados/:id/editar → edição (RF015)
+
+              Mantenho a ORDEM importante das rotas:
+              - "/cadastro" PRECISA vir antes de "/:id" senão o React Router
+                interpreta "cadastro" como se fosse um ID e abre a tela
+                de detalhes ao invés do form. Padrão de rotas dinâmicas.
+            */}
+            <Route path="/almoxarifados" element={<AlmoxarifadosList />} />
+            <Route path="/almoxarifados/cadastro" element={<AlmoxarifadoForm />} />
+            <Route path="/almoxarifados/:id/editar" element={<AlmoxarifadoEdit />} />
+            <Route path="/almoxarifados/:id" element={<AlmoxarifadoDetalhes />} />
 
             {/*
               Módulos "fantasma" — ainda não implementados, mas já têm rota
