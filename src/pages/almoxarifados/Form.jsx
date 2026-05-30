@@ -21,34 +21,12 @@ import EnderecoFields from "../../components/EnderecoFields";
 /**
  * Tela de Cadastro de Almoxarifado (RF013).
  *
- * COMO ESTA TELA SE COMPARA AO FORM DE FORNECEDOR?
- * -------------------------------------------------
- * O Form de Fornecedor permite N endereços (lista) porque uma empresa
- * pode ter sede + filiais. No SQL real, a tabela `Almoxarifado` tem
- * APENAS 1 chave estrangeira `id_endereco` — porque cada almoxarifado
- * é UM lugar físico único. Logo:
- *
- *   - 1 único bloco de endereço (sem botão "adicionar endereço")
- *   - Mas N telefones (mesmo padrão do fornecedor — ramal, celular, etc.)
- *
- * CAMPOS OBRIGATÓRIOS (RF013):
- *   - nome (obrigatório)
- *   - endereço (obrigatório)
- *   - telefone (obrigatório — ao menos 1)
- *   - email (vem do SQL: NOT NULL)
- *
- * FLUXOS DE EXCEÇÃO MAPEADOS NO RF013:
- *   - Campos obrigatórios não preenchidos → mensagem padrão
- *   - Nome já existente → "Nome já registrado."
- *   - Telefone inválido → "Telefone inválido."
- *
- * Essas validações ficam no backend (regra de negócio). Aqui no front
- * só fazemos as validações nativas de HTML (`required`) e exibimos o
- * erro retornado pela API.
+ * INTEGRADO AO BACKEND: POST /api/almoxarifados.
+ * Telefones sao MULTIPLOS: enviados como array `telefones` (mesmo padrao
+ * do Fornecedor). O backend grava cada um na tabela Telefone_Almoxarifado.
  */
 
-// TODO: ativar quando o backend de almoxarifados estiver pronto
-// const API_URL = "http://localhost:5000/api";
+const API_URL = "http://localhost:5000/api";
 
 const enderecoVazio = {
   cep: "",
@@ -63,21 +41,8 @@ const enderecoVazio = {
 export default function AlmoxarifadoForm() {
   const navigate = useNavigate();
 
-  // Estado dos dados principais (escalares).
-  // Mantenho `form` separado de `telefones` e `endereco` porque cada um
-  // tem uma "forma" diferente: form é objeto plano, telefones é array,
-  // endereco é objeto. Misturar tudo num state só complica os updates.
-  const [form, setForm] = useState({
-    nome: "",
-    email: ""
-  });
-
-  // Array de telefones — começa com um item vazio.
-  // RF013 diz "telefone (obrigatório)" no singular, mas como o padrão
-  // do projeto (Fornecedor) usa array, mantemos consistência.
+  const [form, setForm] = useState({ nome: "", email: "" });
   const [telefones, setTelefones] = useState([""]);
-
-  // Único endereço (não é array, conforme o SQL).
   const [endereco, setEndereco] = useState({ ...enderecoVazio });
 
   const [error, setError] = useState("");
@@ -87,7 +52,7 @@ export default function AlmoxarifadoForm() {
     setForm({ ...form, [e.target.name]: e.target.value });
   }
 
-  // === Telefones (mesmo padrão do FornecedorForm) ===
+  // === Telefones ===
   function handleTelefoneChange(index, value) {
     const novos = [...telefones];
     novos[index] = value;
@@ -97,14 +62,11 @@ export default function AlmoxarifadoForm() {
     setTelefones([...telefones, ""]);
   }
   function removerTelefone(index) {
-    if (telefones.length === 1) return; // impede ficar com 0 telefones
+    if (telefones.length === 1) return;
     setTelefones(telefones.filter((_, i) => i !== index));
   }
 
-  // === Endereço único ===
-  // O EnderecoFields espera assinatura (index, campo, valor) porque foi
-  // feito para arrays. Como aqui só temos 1, ignoramos o index e
-  // atualizamos direto o objeto único.
+  // === Endereco unico ===
   function handleEnderecoChange(_index, campo, valor) {
     setEndereco(prev => ({ ...prev, [campo]: valor }));
   }
@@ -114,8 +76,6 @@ export default function AlmoxarifadoForm() {
     setError("");
     setSaving(true);
 
-    // Filtra telefones vazios antes de enviar (usuário pode ter clicado
-    // "adicionar" e não preenchido). Se sobrar 0, é erro do usuário.
     const telefonesValidos = telefones.filter(t => t.trim() !== "");
     if (telefonesValidos.length === 0) {
       setError("Informe ao menos um telefone para contato.");
@@ -123,35 +83,32 @@ export default function AlmoxarifadoForm() {
       return;
     }
 
+    // Telefones vao como ARRAY de strings. O backend grava todos.
     const dados = {
-      ...form,
+      nome: form.nome,
+      email: form.email,
       telefones: telefonesValidos,
-      endereco // objeto único (não array)
+      endereco // objeto unico (nao array)
     };
 
-    // TODO: trocar por fetch POST quando o backend existir.
-    // fetch(`${API_URL}/almoxarifados`, {
-    //   method: "POST",
-    //   headers: { "Content-Type": "application/json" },
-    //   body: JSON.stringify(dados)
-    // })
-    //   .then(res => res.json())
-    //   .then(result => {
-    //     if (result.sucesso) navigate("/almoxarifados");
-    //     else setError(result.erro || "Erro ao cadastrar almoxarifado");
-    //     setSaving(false);
-    //   })
-    //   .catch(err => {
-    //     setError("Erro ao cadastrar: " + err.message);
-    //     setSaving(false);
-    //   });
-
-    // Simulação local (mock) — só loga e navega de volta.
-    console.log("Almoxarifado a cadastrar:", dados);
-    setTimeout(() => {
-      setSaving(false);
-      navigate("/almoxarifados");
-    }, 400);
+    fetch(`${API_URL}/almoxarifados`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(dados)
+    })
+      .then(res => res.json())
+      .then(result => {
+        if (result.sucesso) {
+          navigate("/almoxarifados");
+        } else {
+          setError(result.erro || "Erro ao cadastrar almoxarifado");
+        }
+        setSaving(false);
+      })
+      .catch(err => {
+        setError("Erro ao cadastrar: " + err.message);
+        setSaving(false);
+      });
   }
 
   return (
@@ -217,7 +174,7 @@ export default function AlmoxarifadoForm() {
                   label={`Telefone ${i + 1}`}
                   value={tel}
                   onChange={(e) => handleTelefoneChange(i, e.target.value)}
-                  required={i === 0} // pelo menos o primeiro é obrigatório
+                  required={i === 0}
                 />
                 <IconButton
                   color="error"
@@ -232,11 +189,7 @@ export default function AlmoxarifadoForm() {
 
           <Divider sx={{ my: 3 }} />
 
-          {/* === Endereço (único) ===
-              Não passo `onRemove` ao EnderecoFields porque almoxarifado
-              tem 1 endereço só. O componente já sabe esconder o botão
-              de remover quando essa prop não é fornecida (ver
-              EnderecoFields.jsx: `{onRemove && (...)}`). */}
+          {/* === Endereco (unico) === */}
           <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1.5 }}>
             Endereço
           </Typography>
@@ -247,7 +200,7 @@ export default function AlmoxarifadoForm() {
             onChange={handleEnderecoChange}
           />
 
-          {/* === Ações === */}
+          {/* === Acoes === */}
           <Stack direction="row" spacing={2} justifyContent="flex-end" sx={{ mt: 4 }}>
             <Button variant="outlined" onClick={() => navigate(-1)} disabled={saving}>
               Cancelar

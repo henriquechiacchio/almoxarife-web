@@ -5,6 +5,10 @@
  * (data_criacao / data_atualizacao) e a coluna `ativo` para soft delete,
  * no mesmo padrão de Fornecedores e Funcionarios.
  *
+ * NOTA: o `telefone` NAO fica mais aqui. Os telefones do almoxarifado
+ * agora vivem na tabela Telefone_Almoxarifado (1:N), igual ao Fornecedor.
+ * A associacao (hasMany ... as: "telefones") fica em models/index.js.
+ *
  * @param {import("sequelize").Sequelize} sequelize
  * @param {import("sequelize").DataTypes} DataTypes
  */
@@ -22,10 +26,6 @@ export default (sequelize, DataTypes) => {
     email: {
       type: DataTypes.STRING(150),
       allowNull: false
-    },
-    telefone: {
-    type: DataTypes.STRING(20),
-    allowNull: false
     },
     // FK para Endereco_Almoxarifado. A associação (belongsTo) fica em index.js.
     id_endereco: {

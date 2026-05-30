@@ -20,32 +20,17 @@ import FormPageHeader from "../../components/FormPageHeader";
 import EnderecoFields from "../../components/EnderecoFields";
 
 /**
- * Tela de Edição de Almoxarifado (RF015).
+ * Tela de Edicao de Almoxarifado (RF015).
  *
- * DIFERENÇAS EM RELAÇÃO AO Form.jsx (cadastro)
- * ---------------------------------------------
- * 1. Lê o `id` da URL via `useParams()` (rota /almoxarifados/:id/editar).
- * 2. Tem um `useEffect` inicial que CARREGA os dados existentes e
- *    pré-preenche o formulário (sem isso o usuário começaria com
- *    tudo em branco e teria que digitar tudo de novo).
- * 3. Tem state `loading` para mostrar spinner enquanto carrega.
- * 4. No submit, usa PUT (atualizar) em vez de POST (criar).
+ * INTEGRADO AO BACKEND:
+ *  - useEffect carrega via GET /api/almoxarifados/:id
+ *  - submit atualiza via PUT /api/almoxarifados/:id
  *
- * POR QUE NÃO MERGEAR Form + Edit EM UM SÓ ARQUIVO?
- * --------------------------------------------------
- * Tecnicamente daria — é só ter um `if (id) carrega() else iniciaVazio()`.
- * Mas a equipe já adotou o padrão "Form.jsx" + "Edit.jsx" separados
- * (ver pasta fornecedores/). Seguir o padrão existente é mais importante
- * que economizar duplicação aqui. Quando ALGUÉM da equipe abrir o
- * projeto pela primeira vez, vai esperar ver os 2 arquivos. Surpresa =
- * fricção cognitiva. Consistência > "DRY a qualquer custo".
- *
- * RF015 — campos editáveis: Nome, Endereço, Telefone, E-mail
- * (todos os 4 estão presentes neste form).
+ * Telefones MULTIPLOS: a API devolve `telefones` como [{ telefone }, ...].
+ * Lemos para um array de strings (UI) e reenviamos como array no submit.
  */
 
-// TODO: ativar quando o backend de almoxarifados estiver pronto
-// const API_URL = "http://localhost:5000/api";
+const API_URL = "http://localhost:5000/api";
 
 const enderecoVazio = {
   cep: "",
@@ -55,58 +40,6 @@ const enderecoVazio = {
   bairro: "",
   cidade: "",
   estado: ""
-};
-
-// MOCK: este mock SOMENTE para o Edit funcionar sem backend.
-// Quando o backend existir, este objeto vira a resposta do
-// GET /api/almoxarifados/:id. Os dados aqui espelham os mocks do
-// List.jsx e do Detalhes.jsx para que a navegação faça sentido.
-const MOCK_ALMOXARIFADOS = {
-  1: {
-    cod_almoxarifado: 1,
-    nome: "Almoxarifado Central",
-    email: "central@gilferreira.com.br",
-    telefones: ["(77) 3434-1010"],
-    endereco: {
-      cep: "46300000",
-      logradouro: "Av. Industrial",
-      numero: "1500",
-      complemento: "",
-      bairro: "Distrito Industrial",
-      cidade: "Caculé",
-      estado: "BA"
-    }
-  },
-  2: {
-    cod_almoxarifado: 2,
-    nome: "Almoxarifado Obra Norte",
-    email: "obra.norte@gilferreira.com.br",
-    telefones: ["(77) 3434-2020"],
-    endereco: {
-      cep: "46430000",
-      logradouro: "Rua das Pedreiras",
-      numero: "230",
-      complemento: "",
-      bairro: "Setor Norte",
-      cidade: "Guanambi",
-      estado: "BA"
-    }
-  },
-  3: {
-    cod_almoxarifado: 3,
-    nome: "Almoxarifado Manutenção",
-    email: "manutencao@gilferreira.com.br",
-    telefones: ["(77) 3434-3030"],
-    endereco: {
-      cep: "46100000",
-      logradouro: "Rua das Oficinas",
-      numero: "88",
-      complemento: "",
-      bairro: "Centro",
-      cidade: "Brumado",
-      estado: "BA"
-    }
-  }
 };
 
 export default function AlmoxarifadoEdit() {
@@ -121,46 +54,36 @@ export default function AlmoxarifadoEdit() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
-  // Carrega os dados do almoxarifado ao abrir a tela ou trocar de :id.
-  // Por que `[id]` na dependência? Porque se o usuário navegar entre
-  // /almoxarifados/1/editar e /almoxarifados/2/editar SEM voltar antes,
-  // o componente NÃO desmonta — só o param muda. Sem `[id]` o useEffect
-  // não roda de novo e o usuário continuaria vendo dados antigos.
   useEffect(() => {
     setLoading(true);
     setError("");
 
-    // TODO: substituir por fetch quando o backend existir.
-    // fetch(`${API_URL}/almoxarifados/${id}`)
-    //   .then(res => res.json())
-    //   .then(result => {
-    //     if (result.sucesso) {
-    //       const a = result.dados;
-    //       setForm({ nome: a.nome, email: a.email });
-    //       setTelefones(a.telefones?.length ? a.telefones.map(t => t.telefone) : [""]);
-    //       setEndereco(a.endereco || { ...enderecoVazio });
-    //     } else {
-    //       setError("Almoxarifado não encontrado");
-    //     }
-    //     setLoading(false);
-    //   })
-    //   .catch(err => {
-    //     setError("Erro ao carregar: " + err.message);
-    //     setLoading(false);
-    //   });
-
-    // Simulação local (mock)
-    const found = MOCK_ALMOXARIFADOS[id];
-    if (!found) {
-      setError("Almoxarifado não encontrado.");
-      setLoading(false);
-      return;
-    }
-
-    setForm({ nome: found.nome, email: found.email });
-    setTelefones(found.telefones.length ? found.telefones : [""]);
-    setEndereco(found.endereco);
-    setLoading(false);
+    fetch(`${API_URL}/almoxarifados/${id}`)
+      .then(res => res.json())
+      .then(result => {
+        if (result.sucesso) {
+          const a = result.dados;
+          setForm({ nome: a.nome, email: a.email });
+          // API devolve telefones como [{ telefone }]. Mapeamos para strings.
+          setTelefones(a.telefones?.length ? a.telefones.map(t => t.telefone) : [""]);
+          setEndereco({
+            cep: a.endereco?.cep || "",
+            logradouro: a.endereco?.logradouro || "",
+            numero: a.endereco?.numero || "",
+            complemento: a.endereco?.complemento || "",
+            bairro: a.endereco?.bairro || "",
+            cidade: a.endereco?.cidade || "",
+            estado: a.endereco?.estado || ""
+          });
+        } else {
+          setError(result.erro || "Almoxarifado não encontrado");
+        }
+        setLoading(false);
+      })
+      .catch(err => {
+        setError("Erro ao carregar: " + err.message);
+        setLoading(false);
+      });
   }, [id]);
 
   function handleChange(e) {
@@ -181,7 +104,7 @@ export default function AlmoxarifadoEdit() {
     setTelefones(telefones.filter((_, i) => i !== index));
   }
 
-  // === Endereço único ===
+  // === Endereco unico ===
   function handleEnderecoChange(_index, campo, valor) {
     setEndereco(prev => ({ ...prev, [campo]: valor }));
   }
@@ -198,58 +121,41 @@ export default function AlmoxarifadoEdit() {
       return;
     }
 
+    // PUT (atualiza). Telefones vao como ARRAY (backend substitui todos).
     const dados = {
-      ...form,
+      nome: form.nome,
+      email: form.email,
       telefones: telefonesValidos,
       endereco
     };
 
-    // TODO: trocar por fetch PUT quando o backend existir.
-    // Repare: aqui é PUT (atualiza), não POST (cria).
-    // fetch(`${API_URL}/almoxarifados/${id}`, {
-    //   method: "PUT",
-    //   headers: { "Content-Type": "application/json" },
-    //   body: JSON.stringify(dados)
-    // })
-    //   .then(res => res.json())
-    //   .then(result => {
-    //     if (result.sucesso) navigate("/almoxarifados");
-    //     else setError(result.erro || "Erro ao atualizar almoxarifado");
-    //     setSaving(false);
-    //   })
-    //   .catch(err => {
-    //     setError("Erro ao atualizar: " + err.message);
-    //     setSaving(false);
-    //   });
-
-    // Simulação local (mock) — só loga e volta.
-    console.log(`Almoxarifado #${id} atualizado:`, dados);
-    setTimeout(() => {
-      setSaving(false);
-      navigate("/almoxarifados");
-    }, 400);
+    fetch(`${API_URL}/almoxarifados/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(dados)
+    })
+      .then(res => res.json())
+      .then(result => {
+        if (result.sucesso) {
+          navigate("/almoxarifados");
+        } else {
+          setError(result.erro || "Erro ao atualizar almoxarifado");
+        }
+        setSaving(false);
+      })
+      .catch(err => {
+        setError("Erro ao atualizar: " + err.message);
+        setSaving(false);
+      });
   }
 
-  // Loading state — evita mostrar o form vazio enquanto os dados não
-  // chegaram (UX ruim: o usuário acharia que está sem dados).
+  // Loading state — evita mostrar o form vazio enquanto os dados nao chegaram.
   if (loading) {
     return (
       <Container maxWidth="lg">
-        <FormPageHeader title="Carregando..." backTo="/almoxarifados" />
-        <Box sx={{ display: "flex", justifyContent: "center", py: 8 }}>
+        <Box sx={{ display: "flex", justifyContent: "center", mt: 8 }}>
           <CircularProgress />
         </Box>
-      </Container>
-    );
-  }
-
-  // Erro fatal de carregamento (almoxarifado não existe). Não mostra
-  // formulário, só a mensagem + botão voltar (já incluso no header).
-  if (error && !form.nome) {
-    return (
-      <Container maxWidth="lg">
-        <FormPageHeader title="Editar Almoxarifado" backTo="/almoxarifados" />
-        <Alert severity="error">{error}</Alert>
       </Container>
     );
   }
@@ -258,14 +164,11 @@ export default function AlmoxarifadoEdit() {
     <Container maxWidth="lg">
       <FormPageHeader
         title="Editar Almoxarifado"
-        subtitle={`Atualizando os dados de "${form.nome}"`}
+        subtitle="Atualize os dados do almoxarifado."
         backTo="/almoxarifados"
       />
 
       <Paper sx={{ p: { xs: 2.5, md: 4 }, borderRadius: 3 }}>
-        {/* Alerta para erros de SUBMIT (após o form já estar carregado).
-            Diferente do alerta de erro fatal acima — aqui o form continua
-            visível para o usuário corrigir e tentar de novo. */}
         {error && <Alert severity="error" sx={{ mb: 3 }}>{error}</Alert>}
 
         <form onSubmit={handleSubmit}>
@@ -334,7 +237,7 @@ export default function AlmoxarifadoEdit() {
 
           <Divider sx={{ my: 3 }} />
 
-          {/* === Endereço único === */}
+          {/* === Endereco unico === */}
           <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1.5 }}>
             Endereço
           </Typography>
@@ -345,7 +248,7 @@ export default function AlmoxarifadoEdit() {
             onChange={handleEnderecoChange}
           />
 
-          {/* === Ações === */}
+          {/* === Acoes === */}
           <Stack direction="row" spacing={2} justifyContent="flex-end" sx={{ mt: 4 }}>
             <Button variant="outlined" onClick={() => navigate(-1)} disabled={saving}>
               Cancelar

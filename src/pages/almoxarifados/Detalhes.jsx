@@ -29,96 +29,24 @@ import FormPageHeader from "../../components/FormPageHeader";
 import SummaryCard from "../../components/SummaryCard";
 
 /**
- * Tela de Detalhes de um Almoxarifado específico.
+ * Tela de Detalhes de um Almoxarifado especifico.
  *
- * O QUE ESTA TELA RESOLVE
- * -----------------------
- * Atende ao núcleo do RF014 (Consultar Almoxarifado): "permite ao usuário
- * consultar os estoques de materiais registrados em um determinado
- * almoxarifado, aplicando filtros por data de atualização, fornecedor,
- * produto ou nota fiscal".
+ * INTEGRACAO PARCIAL AO BACKEND:
+ *  - BLOCO 1 (dados cadastrais): via GET /api/almoxarifados/:id  -> REAL.
+ *  - BLOCOS 2 e 3 (estoque): AINDA MOCK. O modulo Estoque nao existe no
+ *    backend (model comentado em models/index.js). Quando ele existir,
+ *    troque MOCK_ESTOQUE por algo como:
+ *        fetch(`${API_URL}/almoxarifados/${id}/estoque`)
+ *    e remova este mock. O resto da tela ja esta pronto.
  *
- * É aberta quando o usuário clica em uma linha da tela de listagem
- * (List.jsx). A rota é /almoxarifados/:id.
- *
- * ANATOMIA DA TELA (de cima pra baixo)
- * ------------------------------------
- * 1. Cabeçalho (FormPageHeader) com botão voltar e nome do almoxarifado.
- * 2. Card com os dados cadastrais (email, telefone, endereço, status).
- * 3. 4 SummaryCards: total de itens, estoque baixo, valor total, última atualização.
- * 4. Filtros do estoque (Produto, Fornecedor, Nota Fiscal, Data) → RF014.
- * 5. Tabela de itens em estoque.
- *
- * POR QUE USAR SummaryCard?
- * -------------------------
- * O componente já existe no sistema (usado no dashboard / Home) e dá
- * um visual consistente. Reutilizar evita criar mais um componente
- * de card que faria a mesma coisa.
- *
- * POR QUE USAR Table DIRETO (e não ListTemplate)?
- * -----------------------------------------------
- * O ListTemplate foi feito para listagens com botões "Novo / Editar /
- * Inativar". Aqui não é uma listagem CRUD — é uma consulta read-only
- * dos itens em estoque, com filtros próprios e sem botão "Novo".
- * Usar ListTemplate forçaria a aparecer um botão "Novo Item" e ações
- * de edit/inativar em cada linha — fora do escopo desta tela.
+ * RF014 (Consultar Almoxarifado): consulta o estoque com filtros por
+ * produto, fornecedor, nota fiscal e data de atualizacao.
  */
 
-// MOCK: substituir por GET /api/almoxarifados/:id quando o backend existir.
-// A estrutura segue o SQL do projeto (Almoxarifado + Endereco_Almoxarifado).
-const MOCK_ALMOXARIFADOS = {
-  1: {
-    cod_almoxarifado: 1,
-    nome: "Almoxarifado Central",
-    email: "central@gilferreira.com.br",
-    telefone: "(77) 3434-1010",
-    endereco: {
-      logradouro: "Av. Industrial",
-      numero: "1500",
-      bairro: "Distrito Industrial",
-      cidade: "Caculé",
-      estado: "BA",
-      cep: "46300000"
-    },
-    ativo: 1,
-    data_atualizacao: "2026-05-26T14:30:00"
-  },
-  2: {
-    cod_almoxarifado: 2,
-    nome: "Almoxarifado Obra Norte",
-    email: "obra.norte@gilferreira.com.br",
-    telefone: "(77) 3434-2020",
-    endereco: {
-      logradouro: "Rua das Pedreiras",
-      numero: "230",
-      bairro: "Setor Norte",
-      cidade: "Guanambi",
-      estado: "BA",
-      cep: "46430000"
-    },
-    ativo: 1,
-    data_atualizacao: "2026-05-25T09:15:00"
-  },
-  3: {
-    cod_almoxarifado: 3,
-    nome: "Almoxarifado Manutenção",
-    email: "manutencao@gilferreira.com.br",
-    telefone: "(77) 3434-3030",
-    endereco: {
-      logradouro: "Rua das Oficinas",
-      numero: "88",
-      bairro: "Centro",
-      cidade: "Brumado",
-      estado: "BA",
-      cep: "46100000"
-    },
-    ativo: 1,
-    data_atualizacao: "2026-05-20T16:45:00"
-  }
-};
+const API_URL = "http://localhost:5000/api";
 
-// MOCK do estoque por almoxarifado.
-// No SQL real isso virá da tabela Estoque (junção com Produtos e Fornecedores).
+// MOCK do estoque por almoxarifado — permanece ate o modulo Estoque existir.
+// No SQL real isso vira da tabela Estoque (junção com Produtos e Compra).
 const MOCK_ESTOQUE = {
   1: [
     { id: 101, produto: "Cimento CP-II 50kg", fornecedor: "Votorantim",   nota_fiscal: "NF-2025/0451", qtd: 320, qtd_minima: 100, valor_unit: 38.50, data_atualizacao: "2026-05-26" },
@@ -148,7 +76,7 @@ export default function AlmoxarifadoDetalhes() {
   const [estoqueFiltrado, setEstoqueFiltrado] = useState([]);
   const [error, setError] = useState("");
 
-  // Filtros conforme RF014: data, fornecedor, produto, nota fiscal.
+  // Filtros conforme RF014: produto, fornecedor, nota fiscal, data.
   const [filtros, setFiltros] = useState({
     produto: "",
     fornecedor: "",
@@ -157,51 +85,38 @@ export default function AlmoxarifadoDetalhes() {
   });
 
   // Carrega dados quando o `id` da URL muda.
-  // Sem o `id` como dependência, se o usuário trocasse de /almoxarifados/1
-  // para /almoxarifados/2 sem voltar, a tela não atualizaria.
   useEffect(() => {
     setError("");
 
-    // TODO: substituir por fetch quando o backend existir.
-    // Promise.all([
-    //   fetch(`${API_URL}/almoxarifados/${id}`).then(r => r.json()),
-    //   fetch(`${API_URL}/almoxarifados/${id}/estoque`).then(r => r.json())
-    // ]).then(([respAlmox, respEstoque]) => { ... });
+    // BLOCO 1 — dados cadastrais via API real.
+    fetch(`${API_URL}/almoxarifados/${id}`)
+      .then(res => res.json())
+      .then(result => {
+        if (result.sucesso) {
+          setAlmoxarifado(result.dados);
+        } else {
+          setError(result.erro || "Almoxarifado não encontrado.");
+        }
+      })
+      .catch(err => setError("Erro ao carregar: " + err.message));
 
-    const found = MOCK_ALMOXARIFADOS[id];
-    if (!found) {
-      setError("Almoxarifado não encontrado.");
-      return;
-    }
-    setAlmoxarifado(found);
-
+    // BLOCOS 2 e 3 — estoque AINDA mock (modulo Estoque nao existe no backend).
     const itens = MOCK_ESTOQUE[id] || [];
     setEstoque(itens);
     setEstoqueFiltrado(itens);
   }, [id]);
 
-  // ── Handlers dos filtros do estoque ──
+  // ── Handlers dos filtros do estoque (filtragem LOCAL no mock) ──
   function handleFiltroChange(campo, valor) {
     setFiltros(prev => ({ ...prev, [campo]: valor }));
   }
 
-  // Aplicação dos filtros: includes case-insensitive em três campos texto
-  // e match exato na data. Esta filtragem é LOCAL — quando ligar o backend,
-  // os mesmos filtros virarão querystring no GET /estoque.
   function handleBuscar() {
     const filtrados = estoque.filter(item => {
-      if (filtros.produto && !item.produto.toLowerCase().includes(filtros.produto.toLowerCase())) {
-        return false;
-      }
-      if (filtros.fornecedor && !item.fornecedor.toLowerCase().includes(filtros.fornecedor.toLowerCase())) {
-        return false;
-      }
-      if (filtros.nota_fiscal && !item.nota_fiscal.toLowerCase().includes(filtros.nota_fiscal.toLowerCase())) {
-        return false;
-      }
-      if (filtros.data && item.data_atualizacao !== filtros.data) {
-        return false;
-      }
+      if (filtros.produto && !item.produto.toLowerCase().includes(filtros.produto.toLowerCase())) return false;
+      if (filtros.fornecedor && !item.fornecedor.toLowerCase().includes(filtros.fornecedor.toLowerCase())) return false;
+      if (filtros.nota_fiscal && !item.nota_fiscal.toLowerCase().includes(filtros.nota_fiscal.toLowerCase())) return false;
+      if (filtros.data && item.data_atualizacao !== filtros.data) return false;
       return true;
     });
     setEstoqueFiltrado(filtrados);
@@ -216,10 +131,7 @@ export default function AlmoxarifadoDetalhes() {
     if (e.key === "Enter") handleBuscar();
   }
 
-  // ── Cálculos derivados (memoizáveis se a lista crescer muito) ──
-  // Por enquanto, calcular direto no render basta — são operações O(n)
-  // sobre uns poucos itens. Se ultrapassar centenas, vale envolver em
-  // useMemo para evitar recalcular a cada render.
+  // ── Calculos derivados ──
   const totalItens = estoque.reduce((sum, it) => sum + it.qtd, 0);
   const valorTotal = estoque.reduce((sum, it) => sum + it.qtd * it.valor_unit, 0);
   const itensBaixoEstoque = estoque.filter(it => it.qtd < it.qtd_minima).length;
@@ -227,7 +139,7 @@ export default function AlmoxarifadoDetalhes() {
     ? new Date(almoxarifado.data_atualizacao).toLocaleDateString("pt-BR")
     : "—";
 
-  // Formatação BR de moeda — Intl.NumberFormat é nativo, não precisa lib.
+  // Formatacao BR de moeda — Intl.NumberFormat e nativo, nao precisa lib.
   const formatarMoeda = (v) =>
     v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
@@ -250,14 +162,14 @@ export default function AlmoxarifadoDetalhes() {
 
   return (
     <Container maxWidth="lg">
-      {/* Cabeçalho da página + botão voltar para /almoxarifados */}
+      {/* Cabecalho + botao voltar para /almoxarifados */}
       <FormPageHeader
         title={almoxarifado.nome}
         subtitle={`Almoxarifado #${almoxarifado.cod_almoxarifado} — visualização de dados e estoque`}
         backTo="/almoxarifados"
       />
 
-      {/* === BLOCO 1: Dados cadastrais do almoxarifado === */}
+      {/* === BLOCO 1: Dados cadastrais (REAL) === */}
       <Paper sx={{ p: { xs: 2.5, md: 3 }, borderRadius: 3, mb: 3 }}>
         <Stack
           direction={{ xs: "column", md: "row" }}
@@ -295,7 +207,7 @@ export default function AlmoxarifadoDetalhes() {
           </Grid>
           <Grid item xs={12} sm={6} md={3}>
             <Typography variant="caption" color="text.secondary">Telefone</Typography>
-            <Typography variant="body2">{almoxarifado.telefone || "—"}</Typography>
+            <Typography variant="body2">{almoxarifado.telefones?.map(t => t.telefone).join(", ") || "—"}</Typography>
           </Grid>
           <Grid item xs={12} md={6}>
             <Typography variant="caption" color="text.secondary">Endereço</Typography>
@@ -309,8 +221,7 @@ export default function AlmoxarifadoDetalhes() {
         </Grid>
       </Paper>
 
-      {/* === BLOCO 2: Resumo do estoque (4 cards) ===
-          Usando o SummaryCard que já existe no sistema (dashboard). */}
+      {/* === BLOCO 2: Resumo do estoque (4 cards) — calculado sobre o MOCK === */}
       <Grid container spacing={2} sx={{ mb: 3 }}>
         <Grid item xs={12} sm={6} md={3}>
           <SummaryCard
@@ -346,7 +257,7 @@ export default function AlmoxarifadoDetalhes() {
         </Grid>
       </Grid>
 
-      {/* === BLOCO 3: Tabela de estoque com filtros (RF014) === */}
+      {/* === BLOCO 3: Tabela de estoque com filtros (RF014) — MOCK === */}
       <Paper sx={{ p: { xs: 2.5, md: 3 }, borderRadius: 3 }}>
         <Typography variant="h6" fontWeight={600} sx={{ mb: 0.5 }}>
           Itens em estoque
@@ -355,7 +266,7 @@ export default function AlmoxarifadoDetalhes() {
           Consulte os materiais deste almoxarifado e aplique filtros para refinar a busca.
         </Typography>
 
-        {/* Linha de filtros — espelha o padrão do List.jsx (TextField + botão Buscar) */}
+        {/* Linha de filtros — espelha o padrao do List.jsx (TextField + botao Buscar) */}
         <Stack
           direction={{ xs: "column", md: "row" }}
           spacing={1.5}
@@ -407,8 +318,7 @@ export default function AlmoxarifadoDetalhes() {
 
         <Divider sx={{ mb: 2 }} />
 
-        {/* Tabela de itens. Não usa ListTemplate porque aqui é
-            consulta read-only (sem botões de edit/inativar por linha). */}
+        {/* Tabela read-only (sem botoes de edit/inativar por linha). */}
         <Box sx={{ overflowX: "auto" }}>
           <Table>
             <TableHead>
@@ -426,9 +336,6 @@ export default function AlmoxarifadoDetalhes() {
             <TableBody>
               {estoqueFiltrado.length ? (
                 estoqueFiltrado.map((item) => {
-                  // Item abaixo do mínimo recebe um Chip de alerta na coluna Qtd. Atual.
-                  // Esse é um padrão de UX: ao invés de criar uma coluna "Status",
-                  // dá pra mostrar o aviso onde o dado problemático aparece.
                   const baixoEstoque = item.qtd < item.qtd_minima;
                   return (
                     <TableRow key={item.id} hover>

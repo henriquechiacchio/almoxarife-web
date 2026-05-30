@@ -16,77 +16,12 @@ import ListTemplate from "../../components/ListTemplate";
 /**
  * Tela de Listagem de Almoxarifados (RF014 — Consultar Almoxarifado).
  *
- * Por que esta tela existe?
- * -------------------------
- * Atende ao RF014 da especificação: o usuário acessa o menu "Almoxarifados",
- * vê a listagem paginada de almoxarifados cadastrados e pode filtrar.
- *
- * Também serve como ponto de entrada para:
- *   - RF013: Cadastrar (botão "Novo" no topo)
- *   - RF015: Editar (ícone de edição na linha)
- *   - RF016: Inativar (ícone de bloqueio na linha)
- *   - Visualização detalhada (clique na linha → /almoxarifados/:id)
- *
- * Por que mock e não fetch?
- * -------------------------
- * O backend de almoxarifados ainda não existe. Para não quebrar a tela ao abrir,
- * uso dados mockados. Quando o backend ficar pronto, basta substituir o
- * trecho marcado com TODO por um fetch — TODA a lógica de filtros, edit,
- * inativação e navegação JÁ ESTÁ PRONTA.
- *
- * Esse padrão (fronend funcional com mock + TODO) é melhor que deixar a
- * tela quebrada esperando o backend — você consegue mostrar o fluxo
- * completo para a equipe / cliente e validar UX antes de codar API.
+ * INTEGRADO AO BACKEND: esta tela agora consome a API real
+ * (GET /api/almoxarifados e DELETE /api/almoxarifados/:id), no mesmo
+ * padrao de Funcionarios e Fornecedores. O mock foi removido.
  */
 
-// MOCK: substituir por GET /api/almoxarifados quando o backend existir
-const MOCK_ALMOXARIFADOS = [
-  {
-    cod_almoxarifado: 1,
-    nome: "Almoxarifado Central",
-    email: "central@gilferreira.com.br",
-    telefone: "(77) 3434-1010",
-    endereco: {
-      logradouro: "Av. Industrial",
-      numero: "1500",
-      bairro: "Distrito Industrial",
-      cidade: "Caculé",
-      estado: "BA",
-      cep: "46300000"
-    },
-    ativo: 1
-  },
-  {
-    cod_almoxarifado: 2,
-    nome: "Almoxarifado Obra Norte",
-    email: "obra.norte@gilferreira.com.br",
-    telefone: "(77) 3434-2020",
-    endereco: {
-      logradouro: "Rua das Pedreiras",
-      numero: "230",
-      bairro: "Setor Norte",
-      cidade: "Guanambi",
-      estado: "BA",
-      cep: "46430000"
-    },
-    ativo: 1
-  },
-  {
-    cod_almoxarifado: 3,
-    nome: "Almoxarifado Manutenção",
-    email: "manutencao@gilferreira.com.br",
-    telefone: "(77) 3434-3030",
-    endereco: {
-      logradouro: "Rua das Oficinas",
-      numero: "88",
-      bairro: "Centro",
-      cidade: "Brumado",
-      estado: "BA",
-      cep: "46100000"
-    },
-    ativo: 1
-  }
-];
+const API_URL = "http://localhost:5000/api";
 
 export default function AlmoxarifadosList() {
   const navigate = useNavigate();
@@ -95,70 +30,66 @@ export default function AlmoxarifadosList() {
   const [selectedItem, setSelectedItem] = useState(null);
   const [inactivating, setInactivating] = useState(false);
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(true);
 
-  // Estado dos filtros (controlled inputs).
-  // Conforme RF014: filtros por nome, cidade ou e-mail.
-  // (A especificação original cita "Data de Atualização, Fornecedor, Produto
-  //  ou Nota Fiscal" — esses filtros fazem sentido na tela de DETALHES
-  //  do almoxarifado, pois consultam os itens DENTRO dele. Aqui na
-  //  listagem geral, faz mais sentido filtrar pelos dados do próprio
-  //  almoxarifado, no mesmo padrão das telas de Funcionários e Fornecedores.)
+  // Estado dos filtros (controlled inputs). Conforme RF014: filtra pelos
+  // dados do proprio almoxarifado (nome, cidade), no mesmo padrao das
+  // telas de Funcionarios/Fornecedores.
   const [filtros, setFiltros] = useState({
     nome: "",
     cidade: ""
   });
 
   // Carrega a lista assim que a tela monta.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     carregarAlmoxarifados();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // ── Função central de busca ──
-  // Mesmo padrão do List.jsx de Fornecedores:
-  // recebe filtros opcionais; se vazio, retorna tudo.
+  // ── Funcao central de busca ──
+  // Recebe filtros opcionais; se vazio, retorna tudo. Monta a query string
+  // apenas com campos preenchidos.
   function carregarAlmoxarifados(filtrosBusca = {}) {
+    setLoading(true);
     setError("");
 
-    // TODO: substituir o bloco abaixo por fetch quando o backend existir.
-    // const params = new URLSearchParams();
-    // Object.entries(filtrosBusca).forEach(([k, v]) => {
-    //   if (v && String(v).trim() !== "") params.append(k, String(v).trim());
-    // });
-    // const qs = params.toString();
-    // fetch(`${API_URL}/almoxarifados${qs ? `?${qs}` : ""}`)
-    //   .then(res => res.json())
-    //   .then(result => { ... });
+    const params = new URLSearchParams();
+    Object.entries(filtrosBusca).forEach(([chave, valor]) => {
+      if (valor && String(valor).trim() !== "") {
+        params.append(chave, String(valor).trim());
+      }
+    });
 
-    // FILTRO LOCAL (apenas para a versão mockada):
-    // Só lista os ativos (ativo === 1) e aplica os filtros informados.
-    const filtrados = MOCK_ALMOXARIFADOS
-      .filter(a => a.ativo === 1)
-      .filter(a => {
-        if (filtrosBusca.nome && !a.nome.toLowerCase().includes(filtrosBusca.nome.toLowerCase())) {
-          return false;
+    const queryString = params.toString();
+    const url = queryString
+      ? `${API_URL}/almoxarifados?${queryString}`
+      : `${API_URL}/almoxarifados`;
+
+    fetch(url)
+      .then(res => res.json())
+      .then(result => {
+        if (result.sucesso) {
+          // As CHAVES do objeto formatado precisam bater com `columns`.
+          const formatado = result.dados.map(a => ({
+            "Nome": a.nome,
+            "Cidade": a.endereco
+              ? `${a.endereco.cidade}/${a.endereco.estado}`
+              : "—",
+            "Telefone": a.telefones?.map(t => t.telefone).join(", ") || "—",
+            "Email": a.email,
+            // Campo "oculto" para recuperar o id nos handlers.
+            __id__: a.cod_almoxarifado
+          }));
+          setData(formatado);
+        } else {
+          setError(result.erro || "Erro ao carregar almoxarifados");
         }
-        if (filtrosBusca.cidade && !a.endereco.cidade.toLowerCase().includes(filtrosBusca.cidade.toLowerCase())) {
-          return false;
-        }
-        return true;
+        setLoading(false);
+      })
+      .catch(err => {
+        setError("Erro ao conectar com o servidor: " + err.message);
+        setLoading(false);
       });
-
-    // Formato esperado pelo ListTemplate: as CHAVES devem bater com
-    // as strings passadas em `columns`. Por isso o map abaixo "renomeia"
-    // os campos para que apareçam exatamente como queremos na tabela.
-    const formatado = filtrados.map(a => ({
-      "Nome": a.nome,
-      "Cidade": `${a.endereco.cidade}/${a.endereco.estado}`,
-      "Telefone": a.telefone,
-      "Email": a.email,
-      // Campo "oculto" prefixado com __ — não está em columns,
-      // então o ListTemplate não exibe, mas posso recuperar nos
-      // handlers de edit / inativar / clique.
-      __id__: a.cod_almoxarifado
-    }));
-
-    setData(formatado);
   }
 
   // ── Handlers dos filtros ──
@@ -170,16 +101,19 @@ export default function AlmoxarifadosList() {
     carregarAlmoxarifados(filtros);
   }
 
+  function handleLimpar() {
+    setFiltros({ nome: "", cidade: "" });
+    carregarAlmoxarifados({});
+  }
+
   // Permite buscar apertando Enter dentro de qualquer campo de filtro.
-  // Pequeno detalhe de UX que economiza um clique do usuário a cada busca.
   function handleKeyDown(e) {
     if (e.key === "Enter") handleBuscar();
   }
 
-  // ── Ações por linha ──
+  // ── Acoes por linha ──
 
-  // Clique na LINHA (não nos botões): abre a tela de detalhes.
-  // Os botões usam stopPropagation, então não disparam este handler.
+  // Clique na LINHA (nao nos botoes): abre a tela de detalhes.
   function handleRowClick(item) {
     navigate(`/almoxarifados/${item.__id__}`);
   }
@@ -197,22 +131,26 @@ export default function AlmoxarifadosList() {
     setInactivating(true);
     setError("");
 
-    // TODO: trocar por fetch DELETE quando o backend estiver pronto.
-    // fetch(`${API_URL}/almoxarifados/${selectedItem.__id__}`, { method: "DELETE" })
-    //   .then(res => res.json())
-    //   .then(result => { ... });
-
-    // Simulação de inativação local (mock):
-    // Marca como inativo no array e recarrega a lista.
-    const alvo = MOCK_ALMOXARIFADOS.find(a => a.cod_almoxarifado === selectedItem.__id__);
-    if (alvo) alvo.ativo = 0;
-
-    setTimeout(() => {
-      carregarAlmoxarifados(filtros);
-      setInactivating(false);
-      setOpenConfirm(false);
-      setSelectedItem(null);
-    }, 300); // pequeno delay para simular latência de rede
+    fetch(`${API_URL}/almoxarifados/${selectedItem.__id__}`, {
+      method: "DELETE"
+    })
+      .then(res => res.json())
+      .then(result => {
+        if (result.sucesso) {
+          carregarAlmoxarifados(filtros); // recarrega mantendo filtros atuais
+        } else {
+          setError(result.erro || "Erro ao inativar almoxarifado");
+        }
+        setInactivating(false);
+        setOpenConfirm(false);
+        setSelectedItem(null);
+      })
+      .catch(err => {
+        setError("Erro ao inativar: " + err.message);
+        setInactivating(false);
+        setOpenConfirm(false);
+        setSelectedItem(null);
+      });
   }
 
   function handleCloseConfirm() {
@@ -228,11 +166,14 @@ export default function AlmoxarifadosList() {
         title="Almoxarifados"
         columns={["Nome", "Cidade", "Telefone", "Email"]}
         data={data}
+        loading={loading}
         onCreate={() => navigate("/almoxarifados/cadastro")}
         onEdit={handleEdit}
         onInactivate={handleInactivateClick}
         onSearch={handleBuscar}
+        onClear={handleLimpar}
         onRowClick={handleRowClick}
+        emptyMessage="Nenhum almoxarifado encontrado com os parâmetros informados."
         filters={
           <>
             <TextField
@@ -253,17 +194,14 @@ export default function AlmoxarifadosList() {
         }
       />
 
-      {/* Diálogo de confirmação de inativação (RF016).
-          Mesmo padrão do List.jsx de Fornecedores: usa Dialog do MUI
-          com um aviso explicando o efeito da ação. */}
+      {/* Dialogo de confirmacao de inativacao (RF016). */}
       <Dialog open={openConfirm} onClose={handleCloseConfirm}>
-        <DialogTitle>Confirmar Inativação</DialogTitle>
+        <DialogTitle>Confirmar inativação</DialogTitle>
         <DialogContent>
           <DialogContentText>
-            Deseja inativar o almoxarifado <strong>{selectedItem?.Nome}</strong>?
-            <br />
-            Esta ação altera o status para "Inativo". O registro será mantido
-            no sistema para fins de histórico e auditoria.
+            Tem certeza que deseja inativar o almoxarifado
+            {selectedItem ? ` "${selectedItem.Nome}"` : ""}? Ele deixará de
+            aparecer na listagem, mas o histórico será preservado.
           </DialogContentText>
         </DialogContent>
         <DialogActions>
@@ -272,8 +210,7 @@ export default function AlmoxarifadosList() {
           </Button>
           <Button
             onClick={handleConfirmInactivate}
-            color="warning"
-            variant="contained"
+            color="error"
             disabled={inactivating}
           >
             {inactivating ? "Inativando..." : "Inativar"}
