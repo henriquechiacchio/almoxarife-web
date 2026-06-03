@@ -17,32 +17,6 @@ import AddIcon from "@mui/icons-material/Add";
 import EditIcon from "@mui/icons-material/Edit";
 import BlockIcon from "@mui/icons-material/Block";
 
-/**
- * Template de listagem padrão do sistema.
- *
- * IMPORTANTE: a API (os props) foi mantida compatível com a versão anterior:
- *   - title, columns, data, onCreate, onEdit, onInactivate, filters, onSearch
- *
- * NOVO: prop opcional `onRowClick`
- * ----------------------------------------------------------------
- * Adicionada para o módulo de Almoxarifados, onde clicar na linha
- * abre a tela de detalhes (com estoque, fornecedores, etc.).
- *
- * Como é OPCIONAL: páginas que NÃO passam `onRowClick` (Fornecedores,
- * Funcionários) continuam funcionando exatamente como antes. O cursor
- * só vira "pointer" e o hover só fica destacado QUANDO a prop existe.
- *
- * Detalhe técnico importante: `e.stopPropagation()` nos botões de
- * Editar/Inativar — sem isso, clicar no botão também dispara o
- * onRowClick (event bubbling do DOM), abrindo os detalhes E executando
- * a ação ao mesmo tempo. Bug clássico.
- *
- * Sobre os filtros:
- *   Cada página passa via prop `filters` os TextFields específicos do
- *   contexto. Aqui dentro só colocamos esses campos em linha e
- *   adicionamos o botão "Buscar" à direita. Padrão de "inversão de
- *   controle" — o componente pai diz o que mostrar, o filho só organiza.
- */
 export default function ListTemplate({
   title,
   filters,
@@ -52,7 +26,11 @@ export default function ListTemplate({
   onEdit,
   onInactivate,
   onSearch,
-  onRowClick // NOVO: opcional, ativa clique na linha
+  onRowClick, // opcional: ativa clique na linha
+  // Customização opcional do botão destrutivo (padrão = Inativar):
+  actionLabel = "Inativar",
+  actionIcon = <BlockIcon fontSize="small" />,
+  actionColor = "warning.main"
 }) {
   return (
     <Paper sx={{ p: 3, borderRadius: 3 }}>
@@ -154,16 +132,16 @@ export default function ListTemplate({
                           <EditIcon fontSize="small" />
                         </IconButton>
                       </Tooltip>
-                      <Tooltip title="Inativar">
+                      <Tooltip title={actionLabel}>
                         <IconButton
                           size="small"
                           onClick={(e) => {
                             e.stopPropagation();
                             onInactivate && onInactivate(item);
                           }}
-                          sx={{ color: "warning.main" }}
+                          sx={{ color: actionColor }}
                         >
-                          <BlockIcon fontSize="small" />
+                          {actionIcon}
                         </IconButton>
                       </Tooltip>
                     </Stack>

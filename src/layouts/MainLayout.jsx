@@ -53,7 +53,7 @@ const menuItems = [
   { label: "Almoxarifados", icon: <WarehouseIcon />,   path: "/almoxarifados", enabled: true  },
   { label: "Produtos / Itens", icon: <Inventory2Icon />, path: "/produtos",    enabled: false },
   { label: "Entradas",      icon: <DownloadIcon />,    path: "/entradas",      enabled: false },
-  { label: "Saídas",        icon: <UploadIcon />,      path: "/saidas",        enabled: false },
+  { label: "Saídas",        icon: <UploadIcon />,      path: "/saidas",        enabled: true },
   { label: "Movimentações", icon: <SwapHorizIcon />,   path: "/movimentacoes", enabled: false },
   { label: "Relatórios",    icon: <AssessmentIcon />,  path: "/relatorios",    enabled: false },
   { label: "Configurações", icon: <SettingsIcon />,    path: "/configuracoes", enabled: false }

@@ -23,6 +23,11 @@ import AlmoxarifadoDetalhes from "./pages/almoxarifados/Detalhes";
 import AlmoxarifadoForm from "./pages/almoxarifados/Form";
 import AlmoxarifadoEdit from "./pages/almoxarifados/Edit";
 
+// Saidas 
+import SaidasList from "./pages/saidas/List";
+import SaidaForm from "./pages/saidas/Form";
+import SaidaEdit from "./pages/saidas/Edit";
+
 function App() {
   return (
     <ThemeProvider theme={theme}>
@@ -33,31 +38,30 @@ function App() {
           <Routes>
             <Route path="/" element={<Home />} />
 
-            {/* Módulos implementados */}
+            {/*Rotas Funcionarios*/}
+
             <Route path="/funcionarios" element={<FuncionariosList />} />
             <Route path="/funcionarios/cadastro" element={<FuncionarioForm />} />
             <Route path="/funcionarios/:id/editar" element={<FuncionarioEdit />} />
+
+            {/*Rotas Fornecedores*/}
 
             <Route path="/fornecedores" element={<FornecedoresList />} />
             <Route path="/fornecedores/cadastro" element={<FornecedorForm />} />
             <Route path="/fornecedores/:id/editar" element={<FornecedorEdit />} />
 
-            {/*
-              Módulo Almoxarifados — fluxo:
-              /almoxarifados            → listagem (com editar e inativar)
-              /almoxarifados/cadastro   → cadastro (RF013)
-              /almoxarifados/:id        → detalhes do almoxarifado (estoque, fornecedores)
-              /almoxarifados/:id/editar → edição (RF015)
+            {/*Rotas Almoxarifado*/}
 
-              Mantenho a ORDEM importante das rotas:
-              - "/cadastro" PRECISA vir antes de "/:id" senão o React Router
-                interpreta "cadastro" como se fosse um ID e abre a tela
-                de detalhes ao invés do form. Padrão de rotas dinâmicas.
-            */}
             <Route path="/almoxarifados" element={<AlmoxarifadosList />} />
             <Route path="/almoxarifados/cadastro" element={<AlmoxarifadoForm />} />
             <Route path="/almoxarifados/:id/editar" element={<AlmoxarifadoEdit />} />
             <Route path="/almoxarifados/:id" element={<AlmoxarifadoDetalhes />} />
+
+            {/*Rotas Saidas*/}
+
+            <Route path="/saidas" element={<SaidasList />} />
+            <Route path="/saidas/cadastro" element={<SaidaForm />} />
+            <Route path="/saidas/:id/editar" element={<SaidaEdit />} />
 
             {/*
               Módulos "fantasma" — ainda não implementados, mas já têm rota
@@ -66,7 +70,6 @@ function App() {
             */}
             <Route path="/produtos"       element={<ComingSoon title="Produtos / Itens" />} />
             <Route path="/entradas"       element={<ComingSoon title="Entradas" />} />
-            <Route path="/saidas"         element={<ComingSoon title="Saídas" />} />
             <Route path="/movimentacoes"  element={<ComingSoon title="Movimentações" />} />
             <Route path="/relatorios"     element={<ComingSoon title="Relatórios" />} />
             <Route path="/configuracoes"  element={<ComingSoon title="Configurações" />} />
