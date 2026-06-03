@@ -19,26 +19,7 @@ import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutline";
 import FormPageHeader from "../../components/FormPageHeader";
 import ItemSaidaRow from "../../components/ItemSaidaRow";
 
-/**
- * Tela de Cadastro de Saida (RF017 - Registrar Saida de Material).
- *
- * SOMENTE FRONT-END. Consome a API no formato { sucesso, dados, erro }.
- *
- * MODELO (schema, tabela Saida):
- *   cod_almoxarifado_origem  (obrigatorio)
- *   id_funcionario_responsavel (obrigatorio)
- *   tipo_saida 'CONSUMO' | 'TRANSFERENCIA' (obrigatorio)
- *   cod_almoxarifado_destino (obrigatorio SE transferencia; null se consumo)
- *   observacao (opcional)
- *   itens: [{ id_produto, quantidade }] (>= 1)
- *
- * Regras de UI vindas do schema:
- *   - destino so aparece em TRANSFERENCIA;
- *   - destino != origem (CHECK ck_destino_diferente) -> filtramos o select.
- */
-
 const API_URL = "http://localhost:5000/api";
-
 const formVazio = {
   cod_almoxarifado_origem: "",
   id_funcionario_responsavel: "",

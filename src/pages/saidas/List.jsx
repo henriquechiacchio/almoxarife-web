@@ -16,38 +16,7 @@ import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 
 import ListTemplate from "../../components/ListTemplate";
 
-/**
- * Tela de Listagem de Saidas (RF018 - Consultar Saida).
- *
- * SOMENTE FRONT-END. O backend de Saida ainda nao foi construido; esta tela
- * ja consome a API no formato { sucesso, dados, erro } usado pelos demais
- * modulos, entao quando o backend subir e so plugar.
- *
- * Segue o MESMO molde de almoxarifados/List.jsx:
- *   - reusa o ListTemplate (que ja traz os botoes Editar e Inativar prontos);
- *   - mantem o filtro -> fetch -> map para o formato de exibicao;
- *   - usa um Dialog de confirmacao antes da acao destrutiva.
- *
- * MODELO DE DADOS (origem: schema SQL, tabela Saida):
- *   id_saida, cod_almoxarifado_origem, id_funcionario_responsavel,
- *   tipo_saida ('CONSUMO' | 'TRANSFERENCIA'), cod_almoxarifado_destino (nullable),
- *   data_saida, observacao + itens (Saida_Item: produto + quantidade).
- *
- * Formato esperado de cada registro vindo da API (result.dados[i]):
- *   {
- *     id_saida,
- *     data_saida,                       // ISO string ou timestamp
- *     tipo_saida,                       // 'CONSUMO' | 'TRANSFERENCIA'
- *     almoxarifadoOrigem:  { nome },
- *     almoxarifadoDestino: { nome } | null,
- *     responsavel:         { nome },
- *     itens: [{ ... }]                  // usado so para contar
- *   }
- */
-
 const API_URL = "http://localhost:5000/api";
-
-// Filtros iniciais. 'tipo' vazio = todos (sem filtro de tipo).
 const filtrosVazios = { responsavel: "", tipo: "" };
 
 export default function SaidasList() {

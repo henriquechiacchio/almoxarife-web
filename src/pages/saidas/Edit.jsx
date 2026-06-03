@@ -19,19 +19,6 @@ import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutline";
 import FormPageHeader from "../../components/FormPageHeader";
 import ItemSaidaRow from "../../components/ItemSaidaRow";
 
-/**
- * Tela de Edicao de Saida (RF019 - Editar Saida de Material).
- *
- * SOMENTE FRONT-END.
- *   - useEffect carrega EM PARALELO as 3 listas + o registro (GET /saidas/:id);
- *   - submit atualiza via PUT /saidas/:id.
- *
- * Mesmas regras de UI do cadastro (destino so em transferencia, destino != origem).
- *
- * Obs. RF019: a excecao "saida ja finalizada" e validada no backend — o schema
- * atual nao tem campo de finalizacao, entao a UI apenas exibe o erro retornado.
- */
-
 const API_URL = "http://localhost:5000/api";
 
 const itemVazio = { id_produto: "", quantidade: "" };
