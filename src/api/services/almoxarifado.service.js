@@ -2,9 +2,9 @@ import * as almoxarifadoRepo from "../repositories/almoxarifado.repository.js"
 
 // ──────────────────────────────────────────────────────────────
 // Validacao de campos obrigatorios.
-// Agora `telefones` e um ARRAY (>= 1 telefone). O endereco precisa
-// dos campos que a tabela Endereco_Almoxarifado exige (sem complemento,
-// que nao existe nessa tabela).
+// `telefones` e um ARRAY (>= 1 telefone). O endereco precisa dos campos
+// que a tabela Endereco_Almoxarifado exige (sem complemento, que nao
+// existe nessa tabela).
 // ──────────────────────────────────────────────────────────────
 function validarCamposObrigatorios(dados) {
   if (!dados.nome || !String(dados.nome).trim()) {
@@ -30,6 +30,20 @@ function validarCamposObrigatorios(dados) {
       throw new Error(`O campo de endereço "${campo}" é obrigatório`)
     }
   }
+}
+
+// ──────────────────────────────────────────────────────────────
+// Limpa e valida o CEP — mesmo padrao do fornecedor.service.js.
+// A coluna `cep` guarda SO os 8 digitos. Se o usuario digita com mascara
+// ("12345-678" = 9 caracteres), estoura "Data too long for column 'cep'".
+// Aqui removemos tudo que nao e digito e validamos o tamanho.
+// ──────────────────────────────────────────────────────────────
+function normalizarCep(cep) {
+  const digitos = String(cep || "").replace(/[^\d]/g, "")
+  if (digitos.length !== 8) {
+    throw new Error("CEP deve conter 8 dígitos")
+  }
+  return digitos
 }
 
 // Remove espacos e descarta telefones vazios; sempre retorna array de strings.
@@ -76,8 +90,9 @@ export const cadastrarAlmoxarifado = async (dados) => {
   }
 
   // 1) Cria o endereco (tabela independente, criada antes do almoxarifado).
+  //    O CEP entra ja limpo (so digitos).
   const enderecoCriado = await almoxarifadoRepo.criarEndereco({
-    cep: dados.endereco.cep,
+    cep: normalizarCep(dados.endereco.cep),
     logradouro: dados.endereco.logradouro,
     numero: dados.endereco.numero,
     bairro: dados.endereco.bairro,
@@ -110,9 +125,9 @@ export const editarAlmoxarifado = async (id, dados) => {
     throw new Error("Email já registrado no sistema")
   }
 
-  // Atualiza o endereco vinculado.
+  // Atualiza o endereco vinculado. CEP tambem entra limpo.
   await almoxarifadoRepo.atualizarEndereco(almoxarifado.id_endereco, {
-    cep: dados.endereco.cep,
+    cep: normalizarCep(dados.endereco.cep),
     logradouro: dados.endereco.logradouro,
     numero: dados.endereco.numero,
     bairro: dados.endereco.bairro,

@@ -51,7 +51,7 @@ export default function SaidaForm() {
     Promise.all([
       fetch(`${API_URL}/almoxarifados`).then((r) => r.json()),
       fetch(`${API_URL}/funcionarios`).then((r) => r.json()),
-      fetch(`${API_URL}/produtos`).then((r) => r.json())
+      fetch(`${API_URL}/produtos`).then((r) => r.json()).catch(() => ({ sucesso: false }))
     ])
       .then(([resAlm, resFunc, resProd]) => {
         if (resAlm.sucesso) setAlmoxarifados(resAlm.dados);

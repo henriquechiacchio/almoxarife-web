@@ -47,7 +47,7 @@ export default function SaidasList() {
     Promise.all([
       fetch(`${API_URL}/almoxarifados`).then((res) => res.json()),
       fetch(`${API_URL}/funcionarios`).then((res) => res.json()),
-      fetch(`${API_URL}/produtos`).then((res) => res.json())
+      fetch(`${API_URL}/produtos`).then((r) => r.json()).catch(() => ({ sucesso: false }))
     ])
       .then(([resAlmoxarifados, resFuncionarios, resProdutos]) => {
         if (resAlmoxarifados.sucesso) setAlmoxarifados(resAlmoxarifados.dados);

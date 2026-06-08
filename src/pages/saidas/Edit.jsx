@@ -53,7 +53,7 @@ export default function SaidaEdit() {
     Promise.all([
       fetch(`${API_URL}/almoxarifados`).then((r) => r.json()),
       fetch(`${API_URL}/funcionarios`).then((r) => r.json()),
-      fetch(`${API_URL}/produtos`).then((r) => r.json()),
+      fetch(`${API_URL}/produtos`).then((r) => r.json()).catch(() => ({ sucesso: false })),
       fetch(`${API_URL}/saidas/${id}`).then((r) => r.json())
     ])
       .then(([resAlm, resFunc, resProd, resSaida]) => {
