@@ -47,7 +47,7 @@ export default (sequelize, DataTypes) => {
       defaultValue: 1
     }
   }, {
-    tableName: "Produtos",
+    tableName: "Produto",
     timestamps: true,
     createdAt: "created_at",
     updatedAt: "updated_at",
