@@ -116,7 +116,8 @@ const verificarDuplicidadeNota = async (numeroNota, idFornecedor, idCompraIgnora
 }
 
 export const listarCompras = async (filtros = {}) => {
-  return await compraRepo.listarTodos(normalizarFiltros(filtros))
+  return await compraRepo.listarTodos(filtros);
+  //return await compraRepo.listarTodos(normalizarFiltros(filtros))
 }
 
 export const buscarCompraPorId = async (id) => {
