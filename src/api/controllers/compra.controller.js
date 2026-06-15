@@ -25,6 +25,7 @@ export const buscarPorId = async (req, res) => {
 }
 
 export const cadastrar = async (req, res) => {
+  console.log("DADOS RECEBIDOS:", req.body);
   try {
     const dados = await compraService.cadastrarCompra(req.body)
     res.status(201).json({
