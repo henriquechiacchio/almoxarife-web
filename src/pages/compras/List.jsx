@@ -1,41 +1,234 @@
-// src/pages/compras/List.jsx
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
-import ListTemplate from '../../components/ListTemplate';
+import { useState, useEffect } from "react";
+import {
+  Container,
+  TextField,
+  MenuItem,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogContentText,
+  DialogActions,
+  Button,
+  Alert
+} from "@mui/material";
+import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
+import { useNavigate } from "react-router-dom";
+import ListTemplate from "../../components/ListTemplate";
 
-const List = () => {
-  const [compras, setCompras] = useState([]);
+// Mesmo padrão das outras telas: fetch nativo + esta constante de URL.
+const API_URL = "http://localhost:5000/api";
+
+export default function ComprasList() {
   const navigate = useNavigate();
 
-  const fetchCompras = async (filtros = {}) => {
-    try {
-      // Ajuste a URL conforme o seu servidor (5000 é o padrão no seu código)
-      const response = await axios.get('http://localhost:5000/api/compras', { params: filtros });
-      setCompras(response.data.dados);
-    } catch (err) {
-      console.error("Erro ao carregar compras", err);
-    }
-  };
+  const [data, setData] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
-  useEffect(() => { fetchCompras(); }, []);
+  // Diálogo de confirmação da exclusão (RF de compras usa DELETE, igual Saídas).
+  const [openConfirm, setOpenConfirm] = useState(false);
+  const [selectedItem, setSelectedItem] = useState(null);
+  const [removendo, setRemovendo] = useState(false);
 
-  const columns = [
-    { title: 'Nota Fiscal', field: 'numero_nota_fiscal' },
-    { title: 'Fornecedor', field: 'fornecedor.nome_fantasia' },
-    { title: 'Data', field: 'data_compra' },
-    { title: 'Status', field: 'status' }
-  ];
+  // Filtros controlados. O compra.controller aceita numero_nota_fiscal e status
+  // (entre outros) via query string.
+  const [filtros, setFiltros] = useState({
+    numero_nota_fiscal: "",
+    status: ""
+  });
+
+  useEffect(() => {
+    carregarCompras();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  function carregarCompras(filtrosBusca = {}) {
+    setLoading(true);
+    setError("");
+
+    // Monta a query string SÓ com os campos preenchidos — mesmo padrão de
+    // Funcionários/Fornecedores/Saídas. Evita mandar ?status= vazio.
+    const params = new URLSearchParams();
+    Object.entries(filtrosBusca).forEach(([chave, valor]) => {
+      if (valor && String(valor).trim() !== "") {
+        params.append(chave, String(valor).trim());
+      }
+    });
+
+    const queryString = params.toString();
+    const url = queryString
+      ? `${API_URL}/compras?${queryString}`
+      : `${API_URL}/compras`;
+
+    fetch(url)
+      .then((res) => res.json())
+      .then((result) => {
+        if (result.sucesso) {
+          // IMPORTANTE: o ListTemplate renderiza item[coluna]. Então cada objeto
+          // precisa ter chaves com o NOME EXATO de cada coluna + um __id__ que as
+          // ações (editar/excluir) usam. Por isso transformamos a resposta da API
+          // nesse formato em vez de jogar o objeto cru do backend.
+          const formatado = result.dados.map((c) => ({
+            "Nota Fiscal": c.numero_nota_fiscal || "—",
+            "Fornecedor":
+              c.fornecedor?.razao_social ||
+              c.fornecedor?.nome_fantasia ||
+              "—",
+            "Data": formatarData(c.data_compra),
+            "Status": c.status,
+            __id__: c.id_compra
+          }));
+          setData(formatado);
+        } else {
+          setError(result.erro || "Erro ao carregar compras");
+        }
+        setLoading(false);
+      })
+      .catch((err) => {
+        setError("Erro ao conectar com o servidor: " + err.message);
+        setLoading(false);
+      });
+  }
+
+  function formatarData(valor) {
+    if (!valor) return "—";
+    const d = new Date(valor);
+    return Number.isNaN(d.getTime()) ? "—" : d.toLocaleDateString("pt-BR");
+  }
+
+  // ── Filtros ──
+  function handleFiltroChange(campo, valor) {
+    setFiltros((prev) => ({ ...prev, [campo]: valor }));
+  }
+  function handleBuscar() {
+    carregarCompras(filtros);
+  }
+  function handleLimpar() {
+    setFiltros({ numero_nota_fiscal: "", status: "" });
+    carregarCompras({});
+  }
+  function handleKeyDown(e) {
+    if (e.key === "Enter") handleBuscar();
+  }
+
+  // ── Ações por linha ──
+  function handleEdit(item) {
+    // O ListTemplate passa o ITEM inteiro (não o id). Pegamos o __id__.
+    navigate(`/compras/${item.__id__}/editar`);
+  }
+  function handleExcluirClick(item) {
+    setSelectedItem(item);
+    setOpenConfirm(true);
+  }
+  function handleConfirmRemove() {
+    setRemovendo(true);
+    setError("");
+
+    fetch(`${API_URL}/compras/${selectedItem.__id__}`, {
+      method: "DELETE"
+    })
+      .then((res) => res.json())
+      .then((result) => {
+        if (result.sucesso) {
+          carregarCompras(filtros); // recarrega mantendo os filtros atuais
+        } else {
+          setError(result.erro || "Erro ao excluir a compra");
+        }
+        finalizarDialogo();
+      })
+      .catch((err) => {
+        setError("Erro ao excluir: " + err.message);
+        finalizarDialogo();
+      });
+  }
+  function finalizarDialogo() {
+    setRemovendo(false);
+    setOpenConfirm(false);
+    setSelectedItem(null);
+  }
+  function handleCloseConfirm() {
+    if (removendo) return; // não deixa fechar no meio da requisição
+    setOpenConfirm(false);
+    setSelectedItem(null);
+  }
 
   return (
-    <ListTemplate 
-      title="Gestão de Compras"
-      data={compras}
-      columns={columns}
-      onAdd={() => navigate('/compras/novo')}
-      onEdit={(id) => navigate(`/compras/editar/${id}`)}
-      onFilter={fetchCompras}
-    />
+    <Container maxWidth="lg">
+      {error && (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {error}
+        </Alert>
+      )}
+
+      <ListTemplate
+        title="Compras"
+        columns={["Nota Fiscal", "Fornecedor", "Data", "Status"]}
+        data={data}
+        loading={loading}
+        onCreate={() => navigate("/compras/cadastro")}
+        onEdit={handleEdit}
+        onInactivate={handleExcluirClick}
+        onSearch={handleBuscar}
+        onClear={handleLimpar}
+        emptyMessage="Nenhuma compra encontrada com os parâmetros informados."
+        // A ação destrutiva de compra é EXCLUSÃO (DELETE), não inativação —
+        // por isso sobrescrevemos o botão padrão do template, igual em Saídas.
+        actionLabel="Excluir"
+        actionIcon={<DeleteOutlineIcon fontSize="small" />}
+        actionColor="error.main"
+        filters={
+          <>
+            <TextField
+              label="Nota Fiscal"
+              size="small"
+              value={filtros.numero_nota_fiscal}
+              onChange={(e) =>
+                handleFiltroChange("numero_nota_fiscal", e.target.value)
+              }
+              onKeyDown={handleKeyDown}
+            />
+            <TextField
+              select
+              label="Status"
+              size="small"
+              value={filtros.status}
+              onChange={(e) => handleFiltroChange("status", e.target.value)}
+              sx={{ minWidth: 180 }}
+            >
+              {/* Valores conforme o ENUM do schema: status_pedido
+                  ENUM('PENDENTE','RECEBIDO','CANCELADO'). */}
+              <MenuItem value="">Todos</MenuItem>
+              <MenuItem value="PENDENTE">Pendente</MenuItem>
+              <MenuItem value="RECEBIDO">Recebido</MenuItem>
+              <MenuItem value="CANCELADO">Cancelado</MenuItem>
+            </TextField>
+          </>
+        }
+      />
+
+      <Dialog open={openConfirm} onClose={handleCloseConfirm}>
+        <DialogTitle>Confirmar exclusão da compra</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            Tem certeza que deseja excluir a compra da nota fiscal{" "}
+            <strong>{selectedItem?.["Nota Fiscal"]}</strong>? Esta ação não pode
+            ser desfeita.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseConfirm} disabled={removendo}>
+            Cancelar
+          </Button>
+          <Button
+            onClick={handleConfirmRemove}
+            color="error"
+            variant="contained"
+            disabled={removendo}
+          >
+            {removendo ? "Excluindo..." : "Excluir"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+    </Container>
   );
-};
-export default List;
+}

@@ -1,96 +1,325 @@
-import React, { useState, useEffect } from 'react';
-import { Box, Paper, TextField, Button, Grid, Typography, IconButton } from '@mui/material';
-import { useParams, useNavigate } from 'react-router-dom';
-import axios from 'axios';
-import DeleteIcon from '@mui/icons-material/Delete';
-import FormPageHeader from '../../components/FormPageHeader';
+import { useEffect, useState } from "react";
+import {
+  Container,
+  TextField,
+  MenuItem,
+  Button,
+  Stack,
+  Typography,
+  Paper,
+  Alert,
+  Divider,
+  Grid,
+  Box,
+  CircularProgress
+} from "@mui/material";
+import { useNavigate } from "react-router-dom";
+import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutline";
 
-const Form = () => {
-  const { id } = useParams();
+import FormPageHeader from "../../components/FormPageHeader";
+import ItemCompraRow from "../../components/ItemCompraRow";
+
+const API_URL = "http://localhost:5000/api";
+
+// Campos EXATAMENTE como o compra.service.js (montarDadosCompra) espera.
+// Sem "status" aqui: na criação o backend força "PENDENTE" automaticamente (RF021).
+const formVazio = {
+  id_fornecedor: "",
+  id_funcionario_comprador: "",
+  cod_almoxarifado_destino: "",
+  numero_nota_fiscal: "",
+  data_compra: "",
+  observacao: ""
+};
+
+const itemVazio = { id_produto: "", quantidade: "", valor_unitario: "" };
+
+export default function CompraForm() {
   const navigate = useNavigate();
-  const [formData, setFormData] = useState({
-    id_fornecedor: '',
-    id_almoxarifado_destino: '',
-    numero_nota_fiscal: '',
-    data_compra: '',
-    status: 'PENDENTE',
-    itens: [{ id_produto: '', quantidade: '', valor_unitario: '' }]
-  });
 
+  const [form, setForm] = useState({ ...formVazio });
+  const [itens, setItens] = useState([{ ...itemVazio }]);
+
+  // Listas que alimentam os selects.
+  const [fornecedores, setFornecedores] = useState([]);
+  const [funcionarios, setFuncionarios] = useState([]);
+  const [almoxarifados, setAlmoxarifados] = useState([]);
+  const [produtos, setProdutos] = useState([]);
+
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+
+  // Carrega as 4 listas EM PARALELO (Promise.all) ao montar a tela.
   useEffect(() => {
-    if (id) {
-      axios.get(`http://localhost:5000/api/compras/${id}`)
-        .then(res => setFormData(res.data.dados))
-        .catch(err => console.error("Erro ao carregar dados:", err));
-    }
-  }, [id]);
+    Promise.all([
+      fetch(`${API_URL}/fornecedores`).then((r) => r.json()),
+      fetch(`${API_URL}/funcionarios`).then((r) => r.json()),
+      fetch(`${API_URL}/almoxarifados`).then((r) => r.json()),
+      // produtos pode ainda não ter seed; o catch evita derrubar o resto.
+      fetch(`${API_URL}/produtos`)
+        .then((r) => r.json())
+        .catch(() => ({ sucesso: false }))
+    ])
+      .then(([resForn, resFunc, resAlm, resProd]) => {
+        if (resForn.sucesso) setFornecedores(resForn.dados);
+        if (resFunc.sucesso) setFuncionarios(resFunc.dados);
+        if (resAlm.sucesso) setAlmoxarifados(resAlm.dados);
+        if (resProd.sucesso) setProdutos(resProd.dados);
+        setLoading(false);
+      })
+      .catch((err) => {
+        setError("Erro ao carregar os dados do formulário: " + err.message);
+        setLoading(false);
+      });
+  }, []);
 
-  const handleItemChange = (index, field, value) => {
-    const newItens = [...formData.itens];
-    newItens[index][field] = value;
-    setFormData({ ...formData, itens: newItens });
-  };
+  function handleChange(e) {
+    const { name, value } = e.target;
+    setForm((prev) => ({ ...prev, [name]: value }));
+  }
 
-  const addItem = () => {
-    setFormData({ ...formData, itens: [...formData.itens, { id_produto: '', quantidade: '', valor_unitario: '' }] });
-  };
+  // === Itens ===
+  function handleItemChange(index, campo, valor) {
+    setItens((prev) => {
+      const novos = [...prev];
+      novos[index] = { ...novos[index], [campo]: valor };
+      return novos;
+    });
+  }
+  function adicionarItem() {
+    setItens((prev) => [...prev, { ...itemVazio }]);
+  }
+  function removerItem(index) {
+    setItens((prev) =>
+      prev.length === 1 ? prev : prev.filter((_, i) => i !== index)
+    );
+  }
 
-  const removeItem = (index) => {
-    setFormData({ ...formData, itens: formData.itens.filter((_, i) => i !== index) });
-  };
-
-  const handleSubmit = async (e) => {
+  function handleSubmit(e) {
     e.preventDefault();
-    try {
-      if (id) {
-        await axios.put(`http://localhost:5000/api/compras/${id}`, formData);
-      } else {
-        await axios.post('http://localhost:5000/api/compras', formData);
-      }
-      navigate('/compras');
-    } catch (err) {
-      alert("Erro ao salvar: " + (err.response?.data?.erro || err.message));
+    setError("");
+
+    // Validação mínima no front (o backend revalida tudo de qualquer forma).
+    const itensValidos = itens.filter(
+      (it) => it.id_produto && it.quantidade && it.valor_unitario
+    );
+    if (itensValidos.length === 0) {
+      setError("Adicione ao menos um item com produto, quantidade e valor.");
+      return;
     }
-  };
+
+    setSaving(true);
+    const payload = { ...form, itens: itensValidos };
+
+    fetch(`${API_URL}/compras`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    })
+      .then((res) => res.json())
+      .then((result) => {
+        if (result.sucesso) {
+          navigate("/compras");
+        } else {
+          setError(result.erro || "Erro ao registrar a compra");
+          setSaving(false);
+        }
+      })
+      .catch((err) => {
+        setError("Erro ao salvar: " + err.message);
+        setSaving(false);
+      });
+  }
+
+  if (loading) {
+    return (
+      <Container maxWidth="md">
+        <Box sx={{ display: "flex", justifyContent: "center", py: 8 }}>
+          <CircularProgress />
+        </Box>
+      </Container>
+    );
+  }
 
   return (
-    <Box sx={{ maxWidth: 800, mx: 'auto', p: 3 }}>
-      <FormPageHeader title={id ? "Editar Compra" : "Nova Compra"} />
-      <Paper sx={{ p: 3, mt: 2 }}>
+    <Container maxWidth="md">
+      <FormPageHeader
+        title="Registrar Compra"
+        subtitle="Registre um novo pedido de compra de materiais."
+        backTo="/compras"
+      />
+
+      <Paper sx={{ p: { xs: 2.5, md: 4 }, borderRadius: 3 }}>
+        {error && (
+          <Alert severity="error" sx={{ mb: 3 }}>
+            {error}
+          </Alert>
+        )}
+
         <form onSubmit={handleSubmit}>
+          <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 2 }}>
+            Dados da compra
+          </Typography>
+
           <Grid container spacing={2}>
-            <Grid item xs={6}>
-              <TextField fullWidth label="Nota Fiscal" value={formData.numero_nota_fiscal} onChange={(e) => setFormData({...formData, numero_nota_fiscal: e.target.value})} />
+            <Grid item xs={12} sm={6}>
+              <TextField
+                select
+                name="id_fornecedor"
+                value={form.id_fornecedor}
+                onChange={handleChange}
+                required
+                fullWidth
+                SelectProps={{ displayEmpty: true }}
+              >
+                <MenuItem value="" disabled>
+                  Selecione o fornecedor
+                </MenuItem>
+                {fornecedores.map((f) => (
+                  <MenuItem key={f.id_fornecedor} value={f.id_fornecedor}>
+                    {f.razao_social || f.nome_fantasia}
+                  </MenuItem>
+                ))}
+              </TextField>
             </Grid>
-            <Grid item xs={6}>
-              <TextField fullWidth label="ID Fornecedor" value={formData.id_fornecedor} onChange={(e) => setFormData({...formData, id_fornecedor: e.target.value})} />
+
+            <Grid item xs={12} sm={6}>
+              <TextField
+                select
+                name="id_funcionario_comprador"
+                value={form.id_funcionario_comprador}
+                onChange={handleChange}
+                required
+                fullWidth
+                SelectProps={{ displayEmpty: true }}
+              >
+                <MenuItem value="" disabled>
+                  Selecione o funcionário comprador
+                </MenuItem>
+                {funcionarios.map((f) => (
+                  <MenuItem key={f.id_funcionario} value={f.id_funcionario}>
+                    {f.nome}
+                  </MenuItem>
+                ))}
+              </TextField>
+            </Grid>
+
+            <Grid item xs={12} sm={6}>
+              <TextField
+                select
+                name="cod_almoxarifado_destino"
+                value={form.cod_almoxarifado_destino}
+                onChange={handleChange}
+                required
+                fullWidth
+                SelectProps={{ displayEmpty: true }}
+              >
+                <MenuItem value="" disabled>
+                  Selecione o destino
+                </MenuItem>
+                {almoxarifados.map((a) => (
+                  <MenuItem key={a.cod_almoxarifado} value={a.cod_almoxarifado}>
+                    {a.nome}
+                  </MenuItem>
+                ))}
+              </TextField>
+            </Grid>
+
+            <Grid item xs={12} sm={6}>
+              <TextField
+                name="numero_nota_fiscal"
+                label="Nota Fiscal"
+                value={form.numero_nota_fiscal}
+                onChange={handleChange}
+                required
+                fullWidth
+              />
+            </Grid>
+
+            <Grid item xs={12} sm={6}>
+              <TextField
+                name="data_compra"
+                label="Data da compra"
+                type="date"
+                value={form.data_compra}
+                onChange={handleChange}
+                required
+                fullWidth
+                InputLabelProps={{ shrink: true }}
+              />
+            </Grid>
+
+            <Grid item xs={12}>
+              <TextField
+                name="observacao"
+                label="Observação"
+                value={form.observacao}
+                onChange={handleChange}
+                fullWidth
+                multiline
+                minRows={2}
+              />
             </Grid>
           </Grid>
 
-          <Typography variant="h6" sx={{ mt: 3, mb: 1 }}>Itens da Compra</Typography>
-          {formData.itens.map((item, index) => (
-            <Grid container spacing={1} key={index} sx={{ mb: 1 }}>
-              <Grid item xs={4}>
-                <TextField fullWidth size="small" label="ID Produto" value={item.id_produto} onChange={(e) => handleItemChange(index, 'id_produto', e.target.value)} />
-              </Grid>
-              <Grid item xs={3}>
-                <TextField fullWidth size="small" label="Qtd" value={item.quantidade} onChange={(e) => handleItemChange(index, 'quantidade', e.target.value)} />
-              </Grid>
-              <Grid item xs={4}>
-                <TextField fullWidth size="small" label="Valor Unit." value={item.valor_unitario} onChange={(e) => handleItemChange(index, 'valor_unitario', e.target.value)} />
-              </Grid>
-              <Grid item xs={1}>
-                <IconButton color="error" onClick={() => removeItem(index)}><DeleteIcon /></IconButton>
-              </Grid>
-            </Grid>
-          ))}
+          <Divider sx={{ my: 3 }} />
 
-          <Button variant="outlined" sx={{ mt: 2 }} onClick={addItem}>Adicionar Produto</Button>
-          <Button fullWidth variant="contained" type="submit" sx={{ mt: 3 }}>Salvar Compra</Button>
+          {/* === Itens da compra === */}
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              mb: 1.5
+            }}
+          >
+            <Typography variant="subtitle2" color="text.secondary">
+              Itens da compra
+            </Typography>
+            <Button
+              size="small"
+              startIcon={<AddCircleOutlineIcon />}
+              onClick={adicionarItem}
+            >
+              Adicionar
+            </Button>
+          </Box>
+
+          <Stack spacing={1.5}>
+            {itens.map((item, i) => (
+              <ItemCompraRow
+                key={i}
+                item={item}
+                index={i}
+                produtos={produtos}
+                onChange={handleItemChange}
+                onRemove={removerItem}
+                disableRemove={itens.length === 1}
+              />
+            ))}
+          </Stack>
+
+          {/* === Ações === */}
+          <Stack
+            direction="row"
+            spacing={2}
+            justifyContent="flex-end"
+            sx={{ mt: 4 }}
+          >
+            <Button
+              variant="outlined"
+              onClick={() => navigate(-1)}
+              disabled={saving}
+            >
+              Cancelar
+            </Button>
+            <Button type="submit" variant="contained" disabled={saving}>
+              {saving ? "Salvando..." : "Salvar"}
+            </Button>
+          </Stack>
         </form>
       </Paper>
-    </Box>
+    </Container>
   );
-};
-
-export default Form;
+}

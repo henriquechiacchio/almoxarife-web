@@ -1,5 +1,3 @@
-//import AssessmentIcon from "@mui/icons-material/Assessment";
-import * as Icons from "@mui/icons-material";
 import { useState, useEffect } from "react";
 import {
   Drawer,
@@ -34,6 +32,8 @@ import SettingsIcon from "@mui/icons-material/Settings";
 import NotificationsIcon from "@mui/icons-material/Notifications";
 import DarkModeIcon from "@mui/icons-material/DarkMode";
 import CalendarTodayIcon from "@mui/icons-material/CalendarToday";
+import AssignmentIcon from "@mui/icons-material/Assignment";
+import AssessmentIcon from "@mui/icons-material/Assessment";
 
 const drawerWidth = 240;
 

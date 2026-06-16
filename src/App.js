@@ -31,6 +31,7 @@ import SaidaEdit from "./pages/saidas/Edit";
 // Compras
 import ListCompras from './pages/compras/List';
 import FormCompras from './pages/compras/Form';
+import EditCompras from './pages/compras/Edit';
 
 function App() {
   return (
@@ -69,10 +70,10 @@ function App() {
               e também deixa pronto para quando a equipe for implementar.
             */}
 
-              {/*<Route path="/compras" element={<ListCompras />} />
-              <Route path="/compras/novo" element={<FormCompras />} />
-              <Route path="/compras/editar/:id" element={<FormCompras />} />
-              */}
+            {/*Rotas Compras*/}
+            <Route path="/compras" element={<ListCompras />} />
+            <Route path="/compras/cadastro" element={<FormCompras />} />
+            <Route path="/compras/:id/editar" element={<EditCompras />} />
 
             <Route path="/produtos"       element={<ComingSoon title="Produtos / Itens" />} />
             <Route path="/entradas"       element={<ComingSoon title="Entradas" />} />
