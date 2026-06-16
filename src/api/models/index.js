@@ -24,7 +24,7 @@ import itemCompraModel from "./item-compra.model.js"
 const sequelize = new Sequelize(
   process.env.DB_NAME || "bd_almoxarifado",
   process.env.DB_USER || "root",
-  process.env.DB_PASSWORD || "admin",
+  process.env.DB_PASSWORD || "desus",
   {
   host: process.env.DB_HOST || "localhost",
   dialect: "mysql",
